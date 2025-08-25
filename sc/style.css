@@ -1,0 +1,44 @@
+body {
+  direction: rtl;         /* يضبط اتجاه الكتابة من اليمين لليسار */
+  text-align: right;      /* يجعل النصوص مصطفة على اليمين */
+  font-family: "Amiri", "Scheherazade", sans-serif; /* خطوط عربية */
+  line-height: 1.8;       /* مسافة بين السطور أوضح */
+}
+code, pre {
+  direction: ltr;         /* يحافظ على الأكواد من اليسار لليمين */
+  text-align: left;
+}
+
+
+
+h1 {
+  font-family: 'ArabicUIDisplayBlack', sans-serif; /* Arabic UI Display Black */
+  font-weight: 500;                             /* Black */
+  text-align: right;
+}
+
+h2 {
+  font-family: 'DubaiMedium', sans-serif;
+  font-weight: 300;
+  text-align: right;
+}
+
+
+h3 {
+  font-family: 'DubaiMedium', sans-serif;
+  font-weight: 200;
+  text-align: right;
+}
+
+@font-face {
+  font-family: 'DubaiMedium';
+  src: url('Dubai_Medium.ttf') format('truetype');
+  font-weight: 500;
+}
+
+
+@font-face {
+  font-family: 'ArabicUIDisplayBlack';
+  src: url('ArabicUIDisplayBlack.otf') format('truetype');
+  font-weight: 500;
+}

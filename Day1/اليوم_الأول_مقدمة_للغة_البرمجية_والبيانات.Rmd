@@ -1,0 +1,41 @@
+---
+title: "اليوم الأول: مقدمة للغة R البرمجية، مع تنظيف البيانات وترتيبها"
+output:
+  html_document:
+    lang: ar
+    css: ../sc/style.css
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+---
+
+
+## في الخطوة الأولى، سنقوم بتهيئة بيئة العمل، ثم نحمّل الحزم البرمجية التي سنحتاج إليها أثناء هذه الورشة.
+
+
+
+*library(ggplot2)*: يقوم هذا الأمر بتحميل الحزمة ggplot2، وهي نظام قوي ومرن لإنشاء رسوم بيانية ثابتة في لغة R.
+للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
+https://ggplot2.tidyverse.org/
+
+*library(maftools)*: حزمة قوية في لغة R مخصصة لتحليل بيانات Mutational Annotation Format (MAF) الخاصة بالتحليلات الجينومية (خصوصًا بيانات الطفرات الجسدية من تقنيات الـ NGS).
+تُستخدم الحزمة بكثرة في مجال المعلوماتية الحيوية (Bioinformatics) لتلخيص بيانات الطفرات، واستخراج إحصاءات، وإنشاء رسومات بيانية تفاعلية/استكشافية.
+للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
+https://github.com/PoisonAlien/maftools
+
+
+
+
+```{r Setting up the environment}
+library(ggplot2)
+library(maftools)
+```
+
+
+
+
+
+
