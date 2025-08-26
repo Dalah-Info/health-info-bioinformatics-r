@@ -21,3 +21,29 @@ library(skimr)
 library(tidyverse)
 library(ggplot2)
 ```
+
+## 2. نقوم بقراءة ملف البيانات الوصفية الذي تم حفظه في اليوم الأول
+
+``` {r load metadata}
+
+url <- "https://raw.githubusercontent.com/Dalah-Info/health-info-bioinformatics-r/refs/heads/main/Day1/Breast_tumor_metadata_cleaned.csv"
+Breast_tumor_metadata = read.csv(url)
+
+```
+
+
+## 3. نقوم بقراءة ملف الطفرات الجينية: MFA
+
+``` {r load maf file}
+
+url2 <- ""
+maf_file = read.maf(maf = url2)
+
+```
+
+
+
+
+
+
+

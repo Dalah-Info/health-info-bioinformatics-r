@@ -30,6 +30,17 @@ h3 {
   text-align: right;
 }
 
+body {
+  direction: rtl;         
+  text-align: right;      
+  font-family: "Amiri", "Scheherazade", sans-serif; 
+  line-height: 1.8;       
+  font-size: 18px;        /* ⬅️ increase base text size */
+}
+
+
+
+
 @font-face {
   font-family: 'DubaiMedium';
   src: url('Dubai_Medium.ttf') format('truetype');
