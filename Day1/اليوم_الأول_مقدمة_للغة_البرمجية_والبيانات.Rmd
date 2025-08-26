@@ -1,41 +1,210 @@
 ---
-title: "اليوم الأول: مقدمة للغة R البرمجية، مع تنظيف البيانات وترتيبها"
+title: 'اليوم الأول: مقدمة للغة R البرمجية، مع تنظيف البيانات وترتيبها'
 output:
   html_document:
     lang: ar
     css: ../sc/style.css
     df_print: paged
-editor_options: 
-  markdown: 
+  pdf_document: default
+editor_options:
+  markdown:
     wrap: sentence
 ---
 
----
+------------------------------------------------------------------------
 
+## 1. سنقوم بتهيئة بيئة العمل، ثم نحمّل الحزم البرمجية التي سنحتاج إليها أثناء هذه الورشة.
 
-## في الخطوة الأولى، سنقوم بتهيئة بيئة العمل، ثم نحمّل الحزم البرمجية التي سنحتاج إليها أثناء هذه الورشة.
+<br><br>
 
-
-
-*library(ggplot2)*: يقوم هذا الأمر بتحميل الحزمة ggplot2، وهي نظام قوي ومرن لإنشاء رسوم بيانية ثابتة في لغة R.
-للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
-https://ggplot2.tidyverse.org/
-
-*library(maftools)*: حزمة قوية في لغة R مخصصة لتحليل بيانات Mutational Annotation Format (MAF) الخاصة بالتحليلات الجينومية (خصوصًا بيانات الطفرات الجسدية من تقنيات الـ NGS).
+**library(maftools)**: حزمة قوية في لغة R مخصصة لتحليل بيانات Mutational Annotation Format (MAF) الخاصة بالتحليلات الجينومية (خصوصًا بيانات الطفرات الجسدية من تقنيات الـ NGS).
 تُستخدم الحزمة بكثرة في مجال المعلوماتية الحيوية (Bioinformatics) لتلخيص بيانات الطفرات، واستخراج إحصاءات، وإنشاء رسومات بيانية تفاعلية/استكشافية.
 للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
-https://github.com/PoisonAlien/maftools
 
+👈 <https://github.com/PoisonAlien/maftools>
 
+**library(ggplot2)**: يقوم هذا الأمر بتحميل الحزمة ggplot2، وهي نظام قوي ومرن لإنشاء رسوم بيانية ثابتة في لغة R.
+للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
 
+👈 <https://ggplot2.tidyverse.org/>
+
+**library(skimr)**: حزمة مخصّصة لتوليد ملخصات وصفية سريعة وثرية للبيانات (summary statistics) بطريقة منظمة وسهلة القراءة.للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
+
+👈 <https://docs.ropensci.org/skimr>
+
+**library(dplyr)**: زمة قوية ومستخدمة على نطاق واسع في لغة R لمعالجة البيانات (data manipulation).للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
+
+👈 <https://dplyr.tidyverse.org>
+
+**library(tidyverse)**: تُحمِّل مجموعة متكاملة من الحزم المصممة لتسهيل تحليل البيانات في R.للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
+
+👉 <https://www.tidyverse.org>
 
 ```{r Setting up the environment}
-library(ggplot2)
 library(maftools)
+library(dplyr)
+library(skimr)
+library(tidyverse)
+library(ggplot2)
 ```
 
+## 2. قراءة البيانات الوصفية (metadatat)، والتعرف عليها، ورسمها كملخصات
 
+<br><br>
 
+### 1️⃣ قراءة البيانات الوصفية والاكلينيكية:
 
+```{r Loading Data}
+url <- "https://raw.githubusercontent.com/Dalah-Info/health-info-bioinformatics-r/refs/heads/main/metadata/breast_tumor_metadata.csv"
+Breast_tumor_metadata <- read.csv(url)
+#استكشاف البيانات
+head(Breast_tumor_metadata)
+```
 
+### 2️⃣ معرفة عدد الأعمدة والصفوف، حيث:
 
+<br><br> **الأعمدة:** عدد البيانات الوصفية والاكلينية التي تم جمعها.
+<br><br> **الصفوف:** عدد المرضى.
+
+```{r exlore metadata}
+
+print(paste("Number of clinical data:", ncol(Breast_tumor_metadata)))
+print(paste("Number of patients:", nrow(Breast_tumor_metadata)))
+```
+
+### 3️⃣ تنظيف البيانات
+
+سنقوم بقراءة جميع الأعمدة وتلخيصها، وذلك بهدف تحديد الأعمدة التي ينبغي إزالتها، مثل:
+
+-   الأعمدة التي تحتوي على بيانات مفقودة بنسبة تتجاوز 50% (قد تكون القيم المفقودة مسجّلة كمسافة بيضاء، أو NA، أو فارغة).
+
+-   الأعمدة غير المفيدة للتحليل، مثل أعمدة تاريخ الإدخال أو التسجيل.
+
+-   الأعمدة التي تحتوي على قيمة واحدة مكررة لجميع المرضى.
+
+لاكتشاف هذه الحالات بسهولة، سنستخدم حزمة **skimr** التي توفّر ملخصًا شاملًا لكل عمود في ملف البيانات، مما يساعد على تحديد الأعمدة الفارغة أو غير المهمة.
+
+```{r Skim metadata}
+
+skimr::skim(Breast_tumor_metadata)
+
+```
+
+نقوم الآن بإزالة الأعمدة ذات الإشكال لنركز على الأعمدة المهمة فقط.
+
+```{r clean metadata}
+# أعمدة لا تحتوي على قيم
+Breast_tumor_metadata$primary_therapy_outcome_success <- NULL 
+Breast_tumor_metadata$eastern_cancer_oncology_group <- NULL
+Breast_tumor_metadata$residual_tumor <- NULL
+Breast_tumor_metadata$tumor_thickness <- NULL
+
+#عمود يحتوي على قيمة واحدة فقط لكل المرضي
+Breast_tumor_metadata$days_to_initial_pathologic_diagnosis <- NULL
+
+```
+
+عدد الأعمدة الوصفية بعد إزالة الأعمدة غير المهمة:
+
+```{r exlore metadata 2}
+
+print(paste("Number of clinical data:", ncol(Breast_tumor_metadata)))
+```
+
+نقرأ أسماء الأعمدة ونسكتشف ونرسم بعضها:
+
+```{r exploratory analysis}
+
+colnames(Breast_tumor_metadata)
+
+```
+
+🔵 Gender information:
+
+```{r exploratory analysis- Gender}
+
+table_gender <- table(Breast_tumor_metadata$gender) 
+
+barplot(table_gender,
+        main = "Gender distribution of breast tumor cases",
+        ylab = "Count",
+        col = c("pink", "lightblue"))
+
+```
+
+🔵 Vital status information:
+
+```{r exploratory analysis - Vital Status}
+
+table_vital_status <- table(Breast_tumor_metadata$vital_status) 
+
+barplot(table_vital_status,
+        main = "Vital status of patients",
+        ylab = "Count",
+        col = c("lightgreen", "tomato"))
+
+```
+
+🔵 New tumor events after treatment information:
+
+```{r exploratory analysis - New tumor after treatment}
+
+table_event <- table(Breast_tumor_metadata$new_tumor_event_after_initial_treatment)
+
+barplot(table_event,
+        main = "New tumor event after initial treatment",
+        ylab = "Count",
+        col = c("gray70", "gray90", "lightblue", "tomato"),
+        las = 2)   # rotate labels so they don't overlap
+
+```
+
+🔵 Radiation therapy status:
+
+```{r exploratory analysis - Radiation therapy}
+
+table_radiation <- table(Breast_tumor_metadata$radiation_therapy)
+
+barplot(table_radiation,
+        main = "Radiation therapy status",
+        ylab = "Count",
+        col = c("orange", "gray70", "gray90", "lightblue", "tomato"),
+        las = 2)  # rotate labels for readability
+```
+
+🔵 Histological types of breast tumors:
+
+```{r exploratory analysis - histological subtypes}
+
+table_hist <- sort(table(Breast_tumor_metadata$histological_type), decreasing = TRUE)
+
+df_hist <- as.data.frame(table_hist)
+
+ggplot(df_hist, aes(x = Var1, y = Freq)) +
+  geom_col(fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Histological types of breast tumors",
+       x = "Histological type", y = "Count") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8))
+
+```
+
+🔵 Pathological stage of breast tumors:
+
+```{r exploratory analysis - pathological stage}
+
+table_stage <- sort(table(Breast_tumor_metadata$pathologic_stage), decreasing = TRUE)
+
+df_stage <- as.data.frame(table_stage)
+
+names(df_stage) <- c("Stage","Count")
+
+ggplot(df_stage, aes(x = reorder(Stage, Count), y = Count)) +
+  geom_col(fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Pathologic stage", x = NULL, y = "Count") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 9))
+
+```
