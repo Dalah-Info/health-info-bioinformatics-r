@@ -55,10 +55,13 @@ library(ggplot2)
 ### 1️⃣ قراءة البيانات الوصفية والاكلينيكية:
 
 ```{r Loading Data}
+
 url <- "https://raw.githubusercontent.com/Dalah-Info/health-info-bioinformatics-r/refs/heads/main/metadata/breast_tumor_metadata.csv"
 Breast_tumor_metadata <- read.csv(url)
 #استكشاف البيانات
+
 head(Breast_tumor_metadata)
+
 ```
 
 ### 2️⃣ معرفة عدد الأعمدة والصفوف، حيث:
@@ -208,3 +211,26 @@ ggplot(df_stage, aes(x = reorder(Stage, Count), y = Count)) +
   theme(axis.text.y = element_text(size = 9))
 
 ```
+
+
+## 3. حفظ الملف بعد الانتهاء منه
+
+```{r save output file}
+
+save_path <- "H:/Other computers/My Laptop (1)/Google Drive/dALLAH/Collab/Talent_health_info/health-info-bioinformatics-r/metadata/"
+
+write.csv(Breast_tumor_metadata, paste0(save_path,"Breast_tumor_metadata_cleaned.csv"))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+

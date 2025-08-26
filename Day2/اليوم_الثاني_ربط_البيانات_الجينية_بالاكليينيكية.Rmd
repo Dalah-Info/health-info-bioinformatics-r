@@ -1,0 +1,23 @@
+---
+title: 'اليوم الثاني: '
+output:
+  html_document:
+    lang: ar
+    css: ../sc/style.css
+    df_print: paged
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+------------------------------------------------------------------------
+## 1. سنقوم بتهيئة بيئة العمل، ثم نحمّل الحزم البرمجية التي سنحتاج إليها أثناء هذه الورشة.
+
+```{r Setting up the environment}
+library(maftools)
+library(dplyr)
+library(skimr)
+library(tidyverse)
+library(ggplot2)
+```
