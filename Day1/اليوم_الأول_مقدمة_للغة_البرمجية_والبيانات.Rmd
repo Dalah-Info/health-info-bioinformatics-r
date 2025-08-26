@@ -217,10 +217,7 @@ ggplot(df_stage, aes(x = reorder(Stage, Count), y = Count)) +
 
 ```{r save output file}
 
-save_path <- "H:/Other computers/My Laptop (1)/Google Drive/dALLAH/Collab/Talent_health_info/health-info-bioinformatics-r/metadata/"
-
-write.csv(Breast_tumor_metadata, paste0(save_path,"Breast_tumor_metadata_cleaned.csv"))
-
+write.csv(Breast_tumor_metadata, "Breast_tumor_metadata_cleaned.csv")
 
 ```
 
