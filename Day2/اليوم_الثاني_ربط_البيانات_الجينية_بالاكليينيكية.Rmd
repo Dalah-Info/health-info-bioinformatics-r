@@ -1,5 +1,5 @@
 ---
-title: 'اليوم الثاني: '
+title: 'اليوم الثاني: تحليل البيانات الجينية وربطها بالبيانات الإكلينيكية '
 output:
   html_document:
     lang: ar
@@ -65,7 +65,7 @@ library(ggplot2)
 ``` {r load metadata}
 
 url <- "https://raw.githubusercontent.com/Dalah-Info/health-info-bioinformatics-r/refs/heads/main/Day1/Breast_tumor_metadata_cleaned.csv"
-Breast_tumor_metadata = read.csv(url)
+Breast_tumor_metadata = read.csv(url,  row.names = NULL)
 
 ```
 
@@ -185,20 +185,29 @@ head(unique(Breast_tumor_metadata$bcr_patient_barcode),5)
 
 ```{r get unique patient ID}
 
-#نستخلص ترميزات المرضى الموجودة في ملف ماف
-maf_patuent_ids <- unique(as.character(maf_file@data$Tumor_Sample_Barcode))
+#ننشئ ملف بيانات يحتوي على الرمز الطويل والقصير للمريض، لنستخدمه لاحقا للدمج.
 
-#نستقطع أول 12 حرف منها، وهي عبارة عن رمز المريض
-maf_patient_ids <- substr(maf_patuent_ids, 1, 12)
+id_map <- data.frame(
+  short_id = substr(maf_file@data$Tumor_Sample_Barcode, 1, 12),             # معرّف المريض (12 حرف)
+  Tumor_Sample_Barcode = as.character(maf_file@data$Tumor_Sample_Barcode),  # المعرّف الكامل للعينة
+  stringsAsFactors = FALSE
+)
 
-# نقوم بتصفية ملف البيانات الوصيفة، حتى نحذف منه أي مريض لا توجد لدينا معلوماته في ملف ماف
-matched_clinical_data <- Breast_tumor_metadata[Breast_tumor_metadata$bcr_patient_barcode %in% maf_patient_ids, ]
+#إزالة التكرار على مستوى المريض 
+id_map <- id_map[!duplicated(id_map$short_id), ]
 
 
-#ننشئ عمود جديد في ملف البيانات الوصفية، يحمل نفس اسم العمود الموجود في ملف ماف (وترميزه أيضا)
-matched_clinical_data$Tumor_Sample_Barcode <- matched_clinical_data$bcr_patient_barcode
+matched_clinical_data <- merge(
+  x = Breast_tumor_metadata,     # البيانات السريرية
+  y = id_map,                    # خريطة المعرّفات من ملف الـ MAF
+  by.x = "bcr_patient_barcode",  # اسم عمود المريض في البيانات السريرية
+  by.y = "short_id",             # اسم عمود المريض (12 حرف) في الخريطة
+  all.x = FALSE                  # احتفظ فقط بالمرضى الموجودين في الـ MAF
+)
 
-#وبالتالي أصبح لدينا عمود مشترك بين الملفين ويمكننا الآن دمجهما في ملف واحد!
+
+## الآن: matched_clinical_data يحوي فقط المرضى المطابقين، وبداخله عمود Tumor_Sample_Barcode المشترك.
+
 
 ```
 
@@ -214,5 +223,317 @@ matched_clinical_data$Tumor_Sample_Barcode <- matched_clinical_data$bcr_patient_
 maf_file <- read.maf(maf = url2, clinicalData = matched_clinical_data, verbose = F)
 
 ```
+
+## 5. ننطلق الآن لاستكشاف الطفرات الجينية المُسجلة في ملف MAF!
+
+### 5.1 ملخص الطفرات المٌسجلة في ملف MAFg لكل مريض.
+
+```{r get sample summary}
+
+getSampleSummary(maf_file)
+
+```
+
+```{r get gene summary}
+
+getGeneSummary(maf_file)
+
+```
+
+
+```{r get gene summary 2}
+
+getClinicalData(maf_file)
+
+```
+
+
+```{r plot maf summary}
+
+plotmafSummary(maf = maf_file, rmOutlier = TRUE, addStat = 'median', dashboard = TRUE, titvRaw = FALSE)
+
+```
+
+
+```{r plot oncoplot of top 10 genes}
+
+oncoplot(maf = maf_file, top = 10)
+
+```
+
+```{r plot titv summary }
+
+laml.titv = titv(maf = maf_file, plot = FALSE, useSyn = TRUE)
+
+#plot titv summary
+plotTiTv(res = laml.titv)
+
+```
+
+
+
+```{r Variant Allele Frequencies}
+
+plotVaf(maf = maf_file, vafCol = NULL, top = 20)
+
+
+```
+
+
+```{r somatic Interactions}
+
+somaticInteractions(maf = maf_file, top = 25, pvalue = c(0.05, 0.1))
+
+```
+
+
+
+```{r Survival analysis}
+library(data.table)
+#1) encode dead alive as 0 and 1
+maf_file@clinical.data$vital_status <- ifelse(maf_file@clinical.data$vital_status %in% c("DEAD", "1"), 1, 0)
+
+# Numeric times
+num <- function(x) suppressWarnings(as.numeric(as.character(x)))
+dtd  <- num(maf_file@clinical.data$days_to_death)
+dtlf <- num(maf_file@clinical.data$days_to_last_followup)
+
+# Unified OS time: death time if dead, else last follow-up
+maf_file@clinical.data$OS.time <- ifelse(!is.na(dtd), dtd, dtlf)
+
+maf_file@clinical.data[,vital_status :=  as.numeric(vital_status)]
+maf_file@clinical.data[,OS.time :=  as.numeric(OS.time)]
+
+
+# Survival analysis
+mafSurvival(maf = maf_file, genes = 'NEB', time = 'OS.time', Status = 'vital_status', isTCGA = FALSE)
+
+
+```
+
+
+```{r survival analysis - gene sets}
+
+# A) Predict genesets associated with survival
+#Using top 20 mutated genes to identify a set of genes (of size 2) to predict poor prognostic groups
+prog_geneset = survGroup(maf = maf_file, top = 20, geneSetSize = 2, time = "OS.time", Status = "vital_status", verbose = FALSE)
+
+mafSurvGroup(maf = maf_file, geneSet = c("FLG", "NEB"), time = "OS.time", Status = "vital_status")
+
+```
+
+```{r Clinical enrichment analysis - gender}
+
+gender.ce = clinicalEnrichment(maf = maf_file, clinicalFeature = 'gender')
+
+
+gender.ce$groupwise_comparision[p_value < 0.05]
+
+
+
+plotEnrichmentResults(enrich_res = gender.ce, pVal = 0.05, geneFontSize = 0.5, annoFontSize = 0.6)
+
+
+```
+
+```{r Clinical enrichment analysis - radiation_therapy}
+
+maf_file@clinical.data$radiation_therapy <- ifelse(
+  maf_file@clinical.data$radiation_therapy %in% c("NO", "YES"),
+  maf_file@clinical.data$radiation_therapy,
+  NA
+)
+
+
+radiation_therapy.ce = clinicalEnrichment(maf = maf_file, clinicalFeature = 'radiation_therapy')
+
+
+radiation_therapy.ce$groupwise_comparision[p_value < 0.05]
+
+
+
+plotEnrichmentResults(enrich_res = radiation_therapy.ce, pVal = 0.001, geneFontSize = 0.5, annoFontSize = 0.6)
+
+
+```
+```{r plot sig genes}
+
+library(data.table)
+library(ggrepel)
+
+# assume your table is called df
+df <- radiation_therapy.ce$pairwise_comparision
+
+# First extract numerator/denominator and compute relative frequencies
+df[, c("mut1", "total1") := tstrsplit(n_mutated_Feature1, " of ", fixed=TRUE)]
+df[, c("mut2", "total2") := tstrsplit(n_mutated_Feature2, " of ", fixed=TRUE)]
+
+# Convert to numeric
+df[, `:=`(mut1 = as.numeric(mut1),
+          total1 = as.numeric(total1),
+          mut2 = as.numeric(mut2),
+          total2 = as.numeric(total2))]
+
+# Compute relative values
+df[, rel1 := mut1 / total1]
+df[, rel2 := mut2 / total2]
+
+
+# Take top 20 significant genes
+top20 <- df[order(fdr)][1:20]
+
+
+# Reshape to long format for ggplot
+plotdf <- melt(top20,
+               id.vars = "Hugo_Symbol",
+               measure.vars = c("rel1", "rel2"),
+               variable.name = "Feature",
+               value.name = "Relative")
+
+# Make Feature labels clearer
+plotdf[, Feature := fifelse(Feature == "rel1", "Feature_1 (YES)", "Feature_2 (NO)")]
+
+# Plot
+ggplot(plotdf, aes(x = reorder(Hugo_Symbol, Relative), y = Relative, fill = Feature)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  coord_flip() +
+  labs(x = "Gene", y = "Relative mutated fraction",
+       title = "Top 20 significant genes by relative mutation frequency") +
+  theme_minimal()
+
+
+```
+
+```{r plot }
+top20[, diff_rel := rel1 - rel2]
+
+ggplot(top20, aes(x = diff_rel, y = -log10(fdr), label = Hugo_Symbol)) +
+  geom_point() +
+  geom_text_repel() +
+  theme_minimal() +
+  labs(x = "Difference in relative mutation (Feature1 - Feature2)",
+       y = "-log10(FDR)",
+       title = "Effect size vs significance")
+```
+
+
+```{r mutation freq}
+
+
+ggplot(top20, aes(x = diff_rel, y = -log10(fdr), size = mut1 + mut2, label = Hugo_Symbol)) +
+  geom_point(alpha = 0.7) +
+  geom_text_repel(data = subset(top20, fdr < 0.05 & (mut1 + mut2) >= 5)) +
+  scale_size_continuous(name = "Total mutations") +
+  theme_minimal() +
+  labs(x = "Difference in relative mutation (Feature1 - Feature2)",
+       y = "-log10(FDR)",
+       title = "Effect size vs significance (highlighting robust genes)")
+
+
+```
+
+``` {r drug-gene interactions}
+
+dgi = drugInteractions(maf = maf_file, fontSize = 0.75)
+
+```
+
+
+
+
+``` {r DGI - specific gene}
+
+dnmt3a.dgi = drugInteractions(genes = "TP53", drugs = TRUE)
+
+#Printing selected columns.
+dnmt3a.dgi[,.(Gene, interaction_types, drug_name, drug_claim_name)]
+
+```
+
+
+``` {r Oncogenic Signaling Pathways}
+
+pws = pathways(maf = maf_file, plotType = 'treemap')
+
+pws
+
+```
+
+# Tumor heterogeneity and MATH scores
+
+```{r Tumor heterogeneity and MATH scores}
+
+library("mclust")
+
+```
+```{r tumor}
+
+hetero_breast_tumor = inferHeterogeneity(maf = maf_file, tsb = 'TCGA-3C-AAAU-01A-11D-A41F-09')
+
+print(hetero_breast_tumor$clusterMeans)
+
+#Visualizing results
+plotClusters(clusters = hetero_breast_tumor)
+
+
+```
+
+
+
+```{r signature}
+
+library('NMF')
+library("BSgenome.Hsapiens.UCSC.hg19", quietly = TRUE)
+
+laml.tnm = trinucleotideMatrix(maf = maf_file, prefix = 'chr', add = TRUE, ref_genome = "BSgenome.Hsapiens.UCSC.hg19")
+plotApobecDiff(tnm = laml.tnm, maf = maf_file, pVal = 0.2)
+
+```
+
+```{r estimateSignatures}
+
+laml.sign = estimateSignatures(mat = laml.tnm, nTry = 6)
+
+plotCophenetic(res = laml.sign)
+```
+
+```{r extract signature }
+
+
+laml.sig = extractSignatures(mat = laml.tnm, n = 3)
+
+```
+
+
+
+
+```{r compare signature}
+
+#Compate against original 30 signatures 
+laml.og30.cosm = compareSignatures(nmfRes = laml.sig, sig_db = "legacy")
+
+#Compate against updated version3 60 signatures 
+laml.v3.cosm = compareSignatures(nmfRes = laml.sig, sig_db = "SBS")
+
+
+```
+
+
+```{r heatmap signature}
+
+library('pheatmap')
+pheatmap::pheatmap(mat = laml.og30.cosm$cosine_similarities, cluster_rows = FALSE, main = "cosine similarity against validated signatures")
+
+```
+
+
+```{r plot signature}
+
+maftools::plotSignatures(nmfRes = laml.sig, title_size = 1.2, sig_db = "SBS")
+
+
+```
+
+
 
 
