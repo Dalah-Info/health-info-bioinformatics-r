@@ -54,15 +54,19 @@ library(dplyr)
 library(skimr)
 library(tidyverse)
 library(ggplot2)
+library(data.table)
+library(ggrepel)
+
+
 ```
+
 <br><br>
 
 ## 2. نقوم بقراءة ملف البيانات الوصفية الذي تم حفظه في اليوم الأول
 
 <br><br>
 
-
-``` {r load metadata}
+```{r load metadata}
 
 url <- "https://raw.githubusercontent.com/Dalah-Info/health-info-bioinformatics-r/refs/heads/main/Day1/Breast_tumor_metadata_cleaned.csv"
 Breast_tumor_metadata = read.csv(url,  row.names = NULL)
@@ -71,35 +75,33 @@ Breast_tumor_metadata = read.csv(url,  row.names = NULL)
 
 <br><br>
 
-
 ## 3. نقوم بقراءة ملف الطفرات الجينية: MFA
 
 <br><br>
 
-
-``` {r load maf file}
+```{r load maf file}
 
 url2 <- "https://github.com/Dalah-Info/health-info-bioinformatics-r/raw/refs/heads/main/maf_file/filtered_maf_breast_only_maftools.maf.gz"
 maf_file = read.maf(maf = url2)
 
 ```
+
 <br><br>
 
 ## 4. نستكشف شكل ملف MAF والبيانات المسجلة فيه
 
 <br><br>
 
+```{r explore maf file}
 
-``` {r explore maf file}
-
-head(maf_file@data) #البيانات الوصفية نجدها في هذه الخانة
+head(maf_file@data) #البيانات الوصفية للحينات نجدها في هذه الخانة
 
 
 ```
 
 نقوم باستخدام أداة **skimr** لتقرأ لنا الملف كاملا
 
-``` {r skim maf file}
+```{r skim maf file}
 
 skim(maf_file@data) 
 
@@ -119,25 +121,24 @@ skim(maf_file@data)
 
 نحتاج إلى عمود واحد مشترك بين الملفين، عادة يكون رمز العينة
 
-
 **أين نجد رمز العينة؟ 🔴**
 
 في ملف MAF، هناك نمطان من ترميز العينات (Sample Barcoding) يجب الانتباه لهما:
 
-1) نمط TCGA
+1)  نمط TCGA
 
-2) نمط UUID
+2)  نمط UUID
 
 اختر النمط الموجود في ملف الـ MAF وأيضًا في البيانات الوصفية (Metadata)، حتى تتمكن من ربط الجدولين باستخدام هذا العمود.
 
-
-``` {r patient ID in MAF file}
+```{r patient ID in MAF file}
 
 head(unique(maf_file@data$Tumor_Sample_UUID), 5) #لايوجد مدخلات
 
 head(unique(maf_file@data$Tumor_Sample_Barcode),5)
 
 ```
+
 <br><br>
 
 سوف نختار رمز TCGA لأن UUID غير موجود في ملف الـ MAF.
@@ -161,25 +162,23 @@ head(unique(maf_file@data$Tumor_Sample_Barcode),5)
 
 ▪️ 09 → المركز (Center)
 
-
 هل توجد هذه البيانات في ملف البيانات الوصفية؟ لنتحقق من ذلك
 
 <br><br>
 
-``` {r explore patient ID in metadata}
+```{r explore patient ID in metadata}
 
 head(unique(Breast_tumor_metadata$bcr_patient_barcode),5)
 
 ```
+
 <br><br>
 
 **🔴رمز العينة في البيانات الوصفية (Metadata):**
 
-لدينا فقط رمز المريض (Patient Barcode) مثل:
-*TCGA-EW-A6S9*، وهو يتكون فقط من أول 12 حرفًا من رمز الـ TCGA الكامل الموجود في ملف MAF.
+لدينا فقط رمز المريض (Patient Barcode) مثل: *TCGA-EW-A6S9*، وهو يتكون فقط من أول 12 حرفًا من رمز الـ TCGA الكامل الموجود في ملف MAF.
 
-✅ إذن القاعدة هي:
-**رمز المريض في الملف الوصفي = أول 12 حرف من رمز العينة في ملف MAF**.
+✅ إذن القاعدة هي: **رمز المريض في الملف الوصفي = أول 12 حرف من رمز العينة في ملف MAF**.
 
 <br><br>
 
@@ -217,16 +216,20 @@ matched_clinical_data <- merge(
 
 <br><br>
 
-
 ```{r integrate maf and metadata file}
 
 maf_file <- read.maf(maf = url2, clinicalData = matched_clinical_data, verbose = F)
 
 ```
 
+
+---
+
 ## 5. ننطلق الآن لاستكشاف الطفرات الجينية المُسجلة في ملف MAF!
 
-### 5.1 ملخص الطفرات المٌسجلة في ملف MAFg لكل مريض.
+<br><br>
+
+### 5.1 ملخص الطفرات المٌسجلة في ملف MAF لكل مريض.
 
 ```{r get sample summary}
 
@@ -234,43 +237,57 @@ getSampleSummary(maf_file)
 
 ```
 
+<br><br>
+
+### 5.2 ملخص الطفرات المٌسجلة في ملف MAF لكل جين.
+
+
 ```{r get gene summary}
 
 getGeneSummary(maf_file)
 
 ```
 
+<br><br>
 
-```{r get gene summary 2}
-
-getClinicalData(maf_file)
-
-```
-
+### 5.3 رسم ملخص شامل لمعظم البيانات 
 
 ```{r plot maf summary}
+# رسم ملخص شامل: عدد الطفرات، نسب الأنواع المختلفة، إحصائيات عامة
 
 plotmafSummary(maf = maf_file, rmOutlier = TRUE, addStat = 'median', dashboard = TRUE, titvRaw = FALSE)
 
 ```
 
+<br><br>
+
+### 5.4 رسم Oncoplot لأكثر 10 جينات تعرضاً للطفرات
+
+تعبر رسمة الـ oncoplot واحدة من أشهر الرسومات المرتبطة بدراسة الطفرات
+
 
 ```{r plot oncoplot of top 10 genes}
+
+# oncoplot يعرض الجينات الأعلى تكراراً في عينات المرضى
 
 oncoplot(maf = maf_file, top = 10)
 
 ```
 
+### 5.5 🔄 تحليل Transition / Transversion (Ti/Tv)
+
 ```{r plot titv summary }
+
+# حساب أنواع الاستبدال (Ti/Tv) في الطفرات
 
 laml.titv = titv(maf = maf_file, plot = FALSE, useSyn = TRUE)
 
-#plot titv summary
+# رسم ملخص Ti/Tv
 plotTiTv(res = laml.titv)
 
 ```
 
-
+### 5.6 رسم توزيع الأليلات: Variant Allele Frequency
 
 ```{r Variant Allele Frequencies}
 
@@ -280,91 +297,175 @@ plotVaf(maf = maf_file, vafCol = NULL, top = 20)
 ```
 
 
+### 5.7 ⚔️ تحليل العلاقة بين الجينات، متناقضة أم متحدة؟
+
 ```{r somatic Interactions}
+# يكشف عن علاقة التعايش أو التنافي بين الطفرات في الجينات
 
 somaticInteractions(maf = maf_file, top = 25, pvalue = c(0.05, 0.1))
 
 ```
 
+## 6. تحليل تأثير الطفرات على الحياة (هل تؤثر الطفرات في هذا الجين على مدة العيش؟)
 
+### 6.1 نتأكد بأن البيانات تستوفي الشكل المطلوب لتطبيق التحليل
 
-```{r Survival analysis}
-library(data.table)
-#1) encode dead alive as 0 and 1
-maf_file@clinical.data$vital_status <- ifelse(maf_file@clinical.data$vital_status %in% c("DEAD", "1"), 1, 0)
+```{r data engineering - survival analysis}
 
-# Numeric times
+# 1) تحويل حالة الوفاة إلى 0/1
+maf_file@clinical.data$vital_status <- ifelse(maf_file@clinical.data$vital_status %in% c("Dead", "1"), 1, 0)
+
+# 2) تحويل الأيام إلى قيم رقمية
 num <- function(x) suppressWarnings(as.numeric(as.character(x)))
 dtd  <- num(maf_file@clinical.data$days_to_death)
 dtlf <- num(maf_file@clinical.data$days_to_last_followup)
 
-# Unified OS time: death time if dead, else last follow-up
+# 3) حساب زمن البقاء (OS.time): وقت الوفاة أو آخر متابعة
+
 maf_file@clinical.data$OS.time <- ifelse(!is.na(dtd), dtd, dtlf)
+
+# تأكيد أن القيم رقمية
 
 maf_file@clinical.data[,vital_status :=  as.numeric(vital_status)]
 maf_file@clinical.data[,OS.time :=  as.numeric(OS.time)]
 
 
-# Survival analysis
+```
+
+### 6.2 🧬 تحليل تأثير الطفرات على الحياة في جين واحد فقط
+
+```{r Survival analysis}
+
+# 4) تحليل البقاء لجين محدد (مثال: NEB)
+
 mafSurvival(maf = maf_file, genes = 'NEB', time = 'OS.time', Status = 'vital_status', isTCGA = FALSE)
 
 
 ```
 
 
+### 6.3 🧬 تحليل تأثير الطفرات على الحياة باستخدام مجموعات من الجينات
+
+
 ```{r survival analysis - gene sets}
 
-# A) Predict genesets associated with survival
-#Using top 20 mutated genes to identify a set of genes (of size 2) to predict poor prognostic groups
-prog_geneset = survGroup(maf = maf_file, top = 20, geneSetSize = 2, time = "OS.time", Status = "vital_status", verbose = FALSE)
+# 5) تحليل البقاء لأكثر من جين
 
-mafSurvGroup(maf = maf_file, geneSet = c("FLG", "NEB"), time = "OS.time", Status = "vital_status")
+# البحث عن مجموعات جينات (مثلاً 2 جين) من بين أعلى 100 جين لتوقع البقاء
+
+prog_geneset = survGroup(maf = maf_file, top = 100, geneSetSize = 2, time = "OS.time", Status = "vital_status", verbose = FALSE)
+
+
+#عرض أول 5 صفوف من النتيجة
+head(prog_geneset, 5)
 
 ```
+
+### 6.4 🪢 رسم نتائج التحليل لمجموعة من الجينات
+
+
+```{r plot survaival analysis of two genes}
+
+# مثال: تحليل البقاء لجيني MUC17 و BRCA2
+
+mafSurvGroup(maf = maf_file, geneSet = c("MUC17", "BRCA2"), time = "OS.time", Status = "vital_status")
+
+
+```
+
+## 7. ربط الطفرات الجينية بالبيانات السريرية
+
+### 7.1 👩‍⚕️ هل توجد جينات تترافق طفراتها مع جنس المريض؟
+
+#### 7.1.1 📈 نتأكد من أن البيانات مناسبة لإجراء التحليل الإحصائي.
 
 ```{r Clinical enrichment analysis - gender}
 
-gender.ce = clinicalEnrichment(maf = maf_file, clinicalFeature = 'gender')
+# توزيع العينات حسب الجنس
 
+table_gender <- table(maf_file@clinical.data$gender) 
 
-gender.ce$groupwise_comparision[p_value < 0.05]
+barplot(table_gender,
+        main = "Gender distribution of breast tumor cases",
+        ylab = "Count",
+        col = c("pink", "lightblue"))
 
-
-
-plotEnrichmentResults(enrich_res = gender.ce, pVal = 0.05, geneFontSize = 0.5, annoFontSize = 0.6)
-
+#نلاحظ أن عدد الذكور أقل بكثير من عدد الإناث وبالتالي لا يمكننا إجراء المقارنة
 
 ```
 
-```{r Clinical enrichment analysis - radiation_therapy}
 
+### 7.2 ☢️ هل توجد جينات تترافق طفراتها مع حالة العلاج الإشعاعي للمريض؟
+
+#### 7.2.1 نتأكد من أن البيانات مناسبة لإجراء التحليل الإحصائي.
+
+
+```{r Check radiation therapy}
+
+# ملخص حالة العلاج الإشعاعي من البيانات السريرية
+
+table_radiation <- table(maf_file@clinical.data$radiation_therapy)
+
+#رسم توزيع الحالات
+
+barplot(table_radiation,
+        main = "Radiation therapy status",
+        ylab = "Count",
+        col = c("orange", "gray70", "gray90", "lightblue", "tomato"),
+        las = 2)  # rotate labels for readability
+
+```
+
+#### 7.2.2 نحتاج لإزالة البيانات الغير مُسجلة أو المفقودة.
+
+``` {r engineer radiation therapy data}
+
+# توحيد القيم إلى YES/NO فقط، وما عدا ذلك يحوّل إلى NA
 maf_file@clinical.data$radiation_therapy <- ifelse(
   maf_file@clinical.data$radiation_therapy %in% c("NO", "YES"),
   maf_file@clinical.data$radiation_therapy,
   NA
 )
 
+# إعادة حساب الجدول بعد التنظيف
+table_radiation <- table(maf_file@clinical.data$radiation_therapy)
 
+# رسم التوزيع بعد التنظيف (YES/NO فقط)
+barplot(table_radiation,
+        main = "Radiation therapy status",
+        ylab = "Count",
+        col = c( "lightblue", "tomato"),
+        las = 2)  # rotate labels for readability
+
+```
+
+#### 7.2.3 📈 نقوم الآن بإجراء الاختبار الإحصائي.
+
+```{r Clinical enrichment analysis - radiation_therapy}
+
+# Clinical feature enrichment using maftools
 radiation_therapy.ce = clinicalEnrichment(maf = maf_file, clinicalFeature = 'radiation_therapy')
 
+head(radiation_therapy.ce)
 
+# إبراز المقارنات ذات الدلالة الإحصائية (p < 0.05)
 radiation_therapy.ce$groupwise_comparision[p_value < 0.05]
 
 
-
+# رسم النتائج مع حد دلالة صارم p <= 0.001
 plotEnrichmentResults(enrich_res = radiation_therapy.ce, pVal = 0.001, geneFontSize = 0.5, annoFontSize = 0.6)
 
 
 ```
+
+#### 7.2.4 📈 استخراج الجينات المرتبط بالعلاج الاشعاعي بطريقة أكثر صحة إحصائيا
+
 ```{r plot sig genes}
 
-library(data.table)
-library(ggrepel)
-
-# assume your table is called df
+# Extract pairwise comparisons table
 df <- radiation_therapy.ce$pairwise_comparision
 
-# First extract numerator/denominator and compute relative frequencies
+# extract numerator/denominator and compute relative frequencies
 df[, c("mut1", "total1") := tstrsplit(n_mutated_Feature1, " of ", fixed=TRUE)]
 df[, c("mut2", "total2") := tstrsplit(n_mutated_Feature2, " of ", fixed=TRUE)]
 
@@ -378,13 +479,15 @@ df[, `:=`(mut1 = as.numeric(mut1),
 df[, rel1 := mut1 / total1]
 df[, rel2 := mut2 / total2]
 
+df <- df[order(-rel1, -rel2)]
+df <- df[fdr < 0.01]
 
-# Take top 20 significant genes
-top20 <- df[order(fdr)][1:20]
+# Take top 10 significant genes
+top10 <- df[order(fdr)][1:10]
 
 
 # Reshape to long format for ggplot
-plotdf <- melt(top20,
+plotdf <- melt(top10,
                id.vars = "Hugo_Symbol",
                measure.vars = c("rel1", "rel2"),
                variable.name = "Feature",
@@ -398,16 +501,20 @@ ggplot(plotdf, aes(x = reorder(Hugo_Symbol, Relative), y = Relative, fill = Feat
   geom_bar(stat = "identity", position = position_dodge()) +
   coord_flip() +
   labs(x = "Gene", y = "Relative mutated fraction",
-       title = "Top 20 significant genes by relative mutation frequency") +
+       title = "Top 10 significant genes by relative mutation frequency") +
   theme_minimal()
 
 
 ```
 
-```{r plot }
-top20[, diff_rel := rel1 - rel2]
+#### 7.2.5 🎯 Effect Size vs Significance
 
-ggplot(top20, aes(x = diff_rel, y = -log10(fdr), label = Hugo_Symbol)) +
+
+```{r plot }
+# فرق النسبة بين المجموعتين كحجم تأثير مبسّط
+top10[, diff_rel := rel1 - rel2]
+
+ggplot(top10, aes(x = diff_rel, y = -log10(fdr), label = Hugo_Symbol)) +
   geom_point() +
   geom_text_repel() +
   theme_minimal() +
@@ -416,56 +523,52 @@ ggplot(top20, aes(x = diff_rel, y = -log10(fdr), label = Hugo_Symbol)) +
        title = "Effect size vs significance")
 ```
 
+## 8. استخراج البيانات الجينية والدوائية
 
-```{r mutation freq}
+### 8.1 💊 البحث عن الأدوية المناسبة لكل جين في ملف MAF
 
-
-ggplot(top20, aes(x = diff_rel, y = -log10(fdr), size = mut1 + mut2, label = Hugo_Symbol)) +
-  geom_point(alpha = 0.7) +
-  geom_text_repel(data = subset(top20, fdr < 0.05 & (mut1 + mut2) >= 5)) +
-  scale_size_continuous(name = "Total mutations") +
-  theme_minimal() +
-  labs(x = "Difference in relative mutation (Feature1 - Feature2)",
-       y = "-log10(FDR)",
-       title = "Effect size vs significance (highlighting robust genes)")
-
-
-```
-
-``` {r drug-gene interactions}
-
+```{r drug-gene interactions}
+# البحث عن تفاعلات دواء-جين للوحة الجينات المستخلصة من الـ MAF
 dgi = drugInteractions(maf = maf_file, fontSize = 0.75)
 
 ```
 
 
+### 8.2 ماذا عن جين واحد فقط؟
 
 
-``` {r DGI - specific gene}
+```{r DGI - specific gene}
 
+# استرجاع التفاعلات الدوائية لجين محدد
 dnmt3a.dgi = drugInteractions(genes = "TP53", drugs = TRUE)
 
-#Printing selected columns.
+# عرض أعمدة مختارة مفيدة للتقارير
 dnmt3a.dgi[,.(Gene, interaction_types, drug_name, drug_claim_name)]
 
 ```
 
+## 9. استخراج مسارات أيضية مُتأثرة بالطفرات
 
-``` {r Oncogenic Signaling Pathways}
 
-pws = pathways(maf = maf_file, plotType = 'treemap')
+```{r Oncogenic Signaling Pathways}
+
+pws = pathways(maf = maf_file, plotType = 'bar')
 
 pws
 
 ```
 
-# Tumor heterogeneity and MATH scores
+## 10. 🧩  دراسة تنوع الطفرات داخل الأورام
 
 ```{r Tumor heterogeneity and MATH scores}
 
+# mclust مطلوبة لتجميع التوزيعات (Gaussian mixture models)
 library("mclust")
 
 ```
+
+نخار عينة واحدة فقط لندرس كيف تتنوع الطفرات في هذه العينة
+
 ```{r tumor}
 
 hetero_breast_tumor = inferHeterogeneity(maf = maf_file, tsb = 'TCGA-3C-AAAU-01A-11D-A41F-09')
@@ -478,17 +581,28 @@ plotClusters(clusters = hetero_breast_tumor)
 
 ```
 
-
+## 11. Mutation Signature 
 
 ```{r signature}
 
 library('NMF')
 library("BSgenome.Hsapiens.UCSC.hg19", quietly = TRUE)
+```
+
+### 11.1 Trinucleotides 
+
+```{r }
+
+
 
 laml.tnm = trinucleotideMatrix(maf = maf_file, prefix = 'chr', add = TRUE, ref_genome = "BSgenome.Hsapiens.UCSC.hg19")
+
 plotApobecDiff(tnm = laml.tnm, maf = maf_file, pVal = 0.2)
 
+
 ```
+
+### 11.2 🔢 Estimate Optimal Number of Signatures
 
 ```{r estimateSignatures}
 
@@ -496,6 +610,8 @@ laml.sign = estimateSignatures(mat = laml.tnm, nTry = 6)
 
 plotCophenetic(res = laml.sign)
 ```
+
+### 11.3 ✂️ Extract NMF signatures for chosen K
 
 ```{r extract signature }
 
@@ -505,7 +621,7 @@ laml.sig = extractSignatures(mat = laml.tnm, n = 3)
 ```
 
 
-
+### 11.4 🔍 Compare against COSMIC reference signatures
 
 ```{r compare signature}
 
@@ -518,14 +634,17 @@ laml.v3.cosm = compareSignatures(nmfRes = laml.sig, sig_db = "SBS")
 
 ```
 
+### 11.5 ♨️ Heatmap: cosine similarity to validated signatures
 
 ```{r heatmap signature}
 
 library('pheatmap')
+
 pheatmap::pheatmap(mat = laml.og30.cosm$cosine_similarities, cluster_rows = FALSE, main = "cosine similarity against validated signatures")
 
 ```
 
+### 11.6  Plot extracted signatures (SBS labels)
 
 ```{r plot signature}
 
@@ -533,7 +652,3 @@ maftools::plotSignatures(nmfRes = laml.sig, title_size = 1.2, sig_db = "SBS")
 
 
 ```
-
-
-
-
