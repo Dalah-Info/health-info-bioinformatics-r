@@ -45,9 +45,27 @@
 ---
 
   ## 😊 التواصل:
-  لأي ملاحظة أو استفسار، يمكنك التواصل مع الدعم الفني لفريق دَالة: support@dalah.org
+  لأي ملاحظة أو استفسار تخص ورشة العمل هذه، يمكنك التواصل مع الدعم الفني لفريق دَالة: support@dalah.org
+<img src="sc/dallah_logo_circle.png" alt="logo" width="60" align="left" />
 
-  <img src="sc/dallah_logo_circle.png" alt="logo" width="60" align="left" />
+<br><br>
+<br><br>
+<p align="center">
+  <a href="https://x.com/Dalah_Info">
+    <img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white" alt="X" />
+  </a>
+  <a href="https://www.linkedin.com/company/dalah/">
+    <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" />
+  </a>
+  <a href="https://www.youtube.com/@Dalah-info">
+    <img src="https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white" alt="YouTube" />
+  </a>
+  <a href="https://www.dalah.info">
+    <img src="https://img.shields.io/badge/Website-21759B?style=flat&logo=google-chrome&logoColor=white" alt="Website" />
+  </a>
+</p>
+
+
 
   
   
