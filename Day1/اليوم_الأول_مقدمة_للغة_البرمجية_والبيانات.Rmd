@@ -1,8 +1,8 @@
 ---
 title: 'اليوم الأول: مقدمة للغة R البرمجية، مع تنظيف البيانات وترتيبها'
+lang: ar
 output:
   html_document:
-    lang: ar
     css: ../sc/style.css
     df_print: paged
   pdf_document: default
@@ -15,7 +15,7 @@ editor_options:
 
 ## 1. سنقوم بتهيئة بيئة العمل، ثم نحمّل الحزم البرمجية التي سنحتاج إليها أثناء هذه الورشة.
 
-<br><br>
+<br>
 
 **library(maftools)**: حزمة قوية في لغة R مخصصة لتحليل بيانات Mutational Annotation Format (MAF) الخاصة بالتحليلات الجينومية (خصوصًا بيانات الطفرات الجسدية من تقنيات الـ NGS).
 تُستخدم الحزمة بكثرة في مجال المعلوماتية الحيوية (Bioinformatics) لتلخيص بيانات الطفرات، واستخراج إحصاءات، وإنشاء رسومات بيانية تفاعلية/استكشافية.
@@ -38,7 +38,26 @@ editor_options:
 
 **library(tidyverse)**: تُحمِّل مجموعة متكاملة من الحزم المصممة لتسهيل تحليل البيانات في R.للاطّلاع على التوثيق التفصيلي، يمكنك زيارة الرابط التالي:
 
-👉 <https://www.tidyverse.org>
+👈 <https://www.tidyverse.org>
+
+### تثبيت الحزم البرمجية (خطوة اختيارية لمرة واحدة فقط)
+
+> ⚠️ ملاحظة: هذه الخطوة مهمة فقط إذا لم تكن الحزم مثبتة مسبقًا على جهازك.  
+بعد التثبيت لمرة واحدة، يمكن تجاهلها والاكتفاء باستخدام `library()` لاحقًا.
+
+```{r Install packages}
+# تثبيت الحزم من CRAN
+#install.packages("maftools")
+#install.packages("dplyr")
+#install.packages("skimr")
+#install.packages("tidyverse")
+#install.packages("ggplot2")
+
+# إذا أردت تثبيت حزم من Bioconductor (لمجالات البيوانفورماتكس):
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+#BiocManager::install("maftools")
+```
 
 ```{r Setting up the environment}
 library(maftools)
@@ -48,32 +67,42 @@ library(tidyverse)
 library(ggplot2)
 ```
 
+📺 لمشاهدة شرح تثبيت الحزم من CRAN / GitHub / Bioconductor:  
+[طريقة تثبيت الحزم في R](https://youtu.be/AQpDAl2yfLM?si=iGebpOznDkZOIlBS)
+
+<br>
+
 ## 2. قراءة البيانات الوصفية (metadatat)، والتعرف عليها، ورسمها كملخصات
 
-<br><br>
+<br>
 
 ### 1️⃣ قراءة البيانات الوصفية والاكلينيكية:
 
 ```{r Loading Data}
-
+# قراءة البيانات من رابط خارجي
 url <- "https://raw.githubusercontent.com/Dalah-Info/health-info-bioinformatics-r/refs/heads/main/metadata/breast_tumor_metadata.csv"
 Breast_tumor_metadata <- read.csv(url)
-#استكشاف البيانات
 
+# استكشاف البيانات عن طريق عرض أول 6 صفوف من البيانات
 head(Breast_tumor_metadata)
 
 ```
 
 ### 2️⃣ معرفة عدد الأعمدة والصفوف، حيث:
 
-<br><br> **الأعمدة:** عدد البيانات الوصفية والاكلينية التي تم جمعها.
-<br><br> **الصفوف:** عدد المرضى.
+<br> **الأعمدة:** عدد البيانات الوصفية والاكلينية التي تم جمعها.
+<br> **الصفوف:** عدد المرضى.
 
 ```{r exlore metadata}
-
+# حساب عدد الأعمدة (عدد المتغيرات أو الخصائص التي لدينا عن المرضى)
 print(paste("Number of clinical data:", ncol(Breast_tumor_metadata)))
+# حساب عدد الصفوف (عدد المرضى في قاعدة البيانات)
 print(paste("Number of patients:", nrow(Breast_tumor_metadata)))
 ```
+📺 لمراجعة الأساسيات وأنواع البيانات والمتغيرات في R:  
+[أنواع البيانات والمتغيرات في R](https://youtu.be/0ZL5iVWh0rc?si=HnFczVmCaSIV3NFD)
+
+<br>
 
 ### 3️⃣ تنظيف البيانات
 
@@ -102,7 +131,7 @@ Breast_tumor_metadata$eastern_cancer_oncology_group <- NULL
 Breast_tumor_metadata$residual_tumor <- NULL
 Breast_tumor_metadata$tumor_thickness <- NULL
 
-#عمود يحتوي على قيمة واحدة فقط لكل المرضي
+#عمود يحتوي على قيمة واحدة فقط لكل المرضي (لا يعطي أي معلومة)
 Breast_tumor_metadata$days_to_initial_pathologic_diagnosis <- NULL
 
 ```
@@ -110,108 +139,153 @@ Breast_tumor_metadata$days_to_initial_pathologic_diagnosis <- NULL
 عدد الأعمدة الوصفية بعد إزالة الأعمدة غير المهمة:
 
 ```{r exlore metadata 2}
-
+# عرض عدد الأعمدة المتبقية بعد إزالة الأعمدة غير المفيدة
 print(paste("Number of clinical data:", ncol(Breast_tumor_metadata)))
 ```
 
 نقرأ أسماء الأعمدة ونسكتشف ونرسم بعضها:
 
 ```{r exploratory analysis}
-
+# عرض أسماء الأعمدة الموجودة في البيانات بعد التنظيف
 colnames(Breast_tumor_metadata)
 
 ```
 
-🔵 Gender information:
+🔵 Gender information (الجنس):
+<br>
+العمود: gender
 
+الهدف: معرفة توزيع المرضى حسب الجنس (ذكر/أنثى).
+
+السبب: بعض أنواع السرطان (مثل سرطان الثدي) تختلف بشكل كبير بين الجنسين.
 ```{r exploratory analysis- Gender}
-
+# إنشاء جدول لعدد المرضى حسب الجنس
 table_gender <- table(Breast_tumor_metadata$gender) 
 
+# رسم بياني يوضح توزيع الجنس
 barplot(table_gender,
-        main = "Gender distribution of breast tumor cases",
-        ylab = "Count",
-        col = c("pink", "lightblue"))
+        main = "Gender distribution of breast tumor cases", # عنوان الرسم
+        ylab = "Count",                                     # تسمية المحور الرأسي
+        col = c("pink", "lightblue"))                       # ألوان للأعمدة
 
 ```
 
-🔵 Vital status information:
+🔵 Vital status information (الحالة الحيوية):
+<br>
+العمود: vital_status
 
+الهدف: معرفة عدد المرضى الأحياء مقابل المتوفين.
+
+السبب: يساعد على فهم النتائج السريرية وربطها بالعوامل الأخرى.
 ```{r exploratory analysis - Vital Status}
-
+# إنشاء جدول  لعدد المرضى حسب الحالة الحيوية (حي أو متوفى)
 table_vital_status <- table(Breast_tumor_metadata$vital_status) 
 
+# رسم بياني يوضح عدد المرضى الأحياء مقابل المتوفين
 barplot(table_vital_status,
-        main = "Vital status of patients",
-        ylab = "Count",
-        col = c("lightgreen", "tomato"))
+        main = "Vital status of patients",# عنوان الرسم
+        ylab = "Count",                   # تسمية المحور الرأسي (عدد المرضى)
+        col = c("lightgreen", "tomato"))  # أخضر = حي، أحمر = متوفى
 
 ```
 
-🔵 New tumor events after treatment information:
+🔵 New tumor events after treatment information (ظهور ورم جديد بعد العلاج):
+<br>
+العمود: new_tumor_event_after_initial_treatment
 
+الهدف: معرفة عدد الحالات التي ظهر لديها ورم جديد بعد العلاج الأولي.
+
+السبب: هذا المؤشر مهم لفهم الاستجابة للعلاج وتقييم احتمالية الانتكاس.
 ```{r exploratory analysis - New tumor after treatment}
-
+# إنشاء جدول لعدد الحالات التي ظهر لديها ورم جديد بعد العلاج الأولي
 table_event <- table(Breast_tumor_metadata$new_tumor_event_after_initial_treatment)
 
-barplot(table_event,
-        main = "New tumor event after initial treatment",
-        ylab = "Count",
-        col = c("gray70", "gray90", "lightblue", "tomato"),
-        las = 2)   # rotate labels so they don't overlap
+# رسم بياني يوضح عدد الحالات مع/بدون ورم جديد
+barplot(table_event,                                         
+        main = "New tumor event after initial treatment",   # عنوان الرسم
+        ylab = "Count",                                     # تسمية المحور الرأسي
+        col = c("gray70", "gray90", "lightblue", "tomato"), # ألوان للأعمدة
+        las = 2)                                           # تدوير أسماء التصنيفات لسهولة القراءة
 
 ```
 
-🔵 Radiation therapy status:
+🔵 Radiation therapy status (العلاج الإشعاعي):
+<br>
+العمود: radiation_therapy
 
+الهدف: معرفة نسبة المرضى الذين تلقوا علاج إشعاعي.
+
+السبب: العلاج الإشعاعي عنصر مهم في خطة العلاج وقد يؤثر على النتائج.
 ```{r exploratory analysis - Radiation therapy}
-
+# إنشاء جدول  يوضح عدد المرضى الذين تلقوا/لم يتلقوا علاج إشعاعي
 table_radiation <- table(Breast_tumor_metadata$radiation_therapy)
 
+# رسم بياني يوضح حالة العلاج الإشعاعي
 barplot(table_radiation,
-        main = "Radiation therapy status",
-        ylab = "Count",
-        col = c("orange", "gray70", "gray90", "lightblue", "tomato"),
-        las = 2)  # rotate labels for readability
+        main = "Radiation therapy status",                             # عنوان الرسم
+        ylab = "Count",                                                # تسمية المحور الرأسي
+        col = c("orange", "gray70", "gray90", "lightblue", "tomato"),  # ألوان مختلفة للتصنيفات
+        las = 2)                                                       # تدوير النصوص لسهولة القراءة
 ```
 
-🔵 Histological types of breast tumors:
+🔵 Histological types of breast tumors (الأنواع النسيجية للأورام):
+<br>
+العمود: histological_type
 
+الهدف: معرفة الأنواع النسيجية المختلفة لأورام الثدي.
+
+السبب: يساعد في تصنيف المرضى حسب نوع الورم، وهو مهم جدًا في التشخيص والعلاج.
 ```{r exploratory analysis - histological subtypes}
-
+# إنشاء جدول للأنواع النسيجية المختلفة للأورام
+# مع ترتيبها تنازليًا (الأكثر شيوعًا أولًا)
 table_hist <- sort(table(Breast_tumor_metadata$histological_type), decreasing = TRUE)
 
+# تحويل الجدول إلى إطار بيانات (DataFrame) حتى نستطيع استخدام ggplot
 df_hist <- as.data.frame(table_hist)
 
-ggplot(df_hist, aes(x = Var1, y = Freq)) +
-  geom_col(fill = "skyblue") +
-  coord_flip() +
-  labs(title = "Histological types of breast tumors",
-       x = "Histological type", y = "Count") +
-  theme_minimal() +
-  theme(axis.text.y = element_text(size = 8))
+# رسم بياني باستخدام ggplot يوضح الأنواع النسيجية للأورام
+ggplot(df_hist, aes(x = Var1, y = Freq)) +            #x = أسماء الأنواع النسيجية، y = عدد الحالات لكل نوع
+  geom_col(fill = "skyblue") +                        # أعمدة ملونة باللون الأزرق
+  coord_flip() +                                      # قلب الرسم (الأعمدة أفقية بدل رأسية)
+  labs(title = "Histological types of breast tumors", # عنوان الرسم
+       x = "Histological type", y = "Count") +        # تسمية المحور الرأسي و الأفقي
+  theme_minimal() +                                   # شكل مبسط (ثيم) للرسم
+  theme(axis.text.y = element_text(size = 8))         # تصغير حجم النص على المحور
 
 ```
 
-🔵 Pathological stage of breast tumors:
+🔵 Pathological stage of breast tumors (المرحلة المرضية للورم):
+<br>
+العمود: pathologic_stage
 
+الهدف: توزيع المرضى حسب مراحل السرطان (Stage I, II, III, IV).
+
+السبب: المرحلة المرضية مؤشر مهم جدًا للتشخيص والتنبؤ بالنتائج وخطة العلاج.
 ```{r exploratory analysis - pathological stage}
-
+# إنشاء جدول لمراحل السرطان (Stage I, II, III, IV)
+# مع ترتيبها تنازليًا (الأكثر شيوعًا أولًا)
 table_stage <- sort(table(Breast_tumor_metadata$pathologic_stage), decreasing = TRUE)
 
+# تحويل الجدول إلى إطار بيانات
 df_stage <- as.data.frame(table_stage)
 
+# إعادة تسمية الأعمدة لتكون أوضح
 names(df_stage) <- c("Stage","Count")
 
-ggplot(df_stage, aes(x = reorder(Stage, Count), y = Count)) +
-  geom_col(fill = "skyblue") +
-  coord_flip() +
-  labs(title = "Pathologic stage", x = NULL, y = "Count") +
-  theme_minimal() +
-  theme(axis.text.y = element_text(size = 9))
+# رسم بياني باستخدام ggplot يوضح توزيع المرضى حسب المرحلة المرضية
+ggplot(df_stage, aes(x = reorder(Stage, Count), y = Count)) +  #x = ترتيب المراحل حسب عدد المرضى | y =  عدد المرضى في كل مرحلة
+  geom_col(fill = "skyblue") +                                # أعمدة ملونة باللون الأزرق
+  coord_flip() +                                              # قلب الرسم (الأعمدة أفقية)
+  labs(title = "Pathologic stage", x = NULL, y = "Count") +   # عنوان الرسم وتسمية المحاور
+  theme_minimal() +                                           # شكل مبسط (ثيم) للرسم
+  theme(axis.text.y = element_text(size = 9))                 # حجم النص على المحور
 
 ```
 
+📺 لفهم  ggplot2 وكيفية إنشاء الرسوم:  
+[الرسوم البيانية باستخدام ggplot](https://youtu.be/5fh-XZ75ouE?si=8QXyj9e7sZoGCMML)
+
+<br>
 
 ## 3. حفظ الملف بعد الانتهاء منه
 
