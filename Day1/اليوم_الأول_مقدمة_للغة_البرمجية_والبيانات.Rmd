@@ -47,16 +47,16 @@ editor_options:
 
 ```{r Install packages}
 # تثبيت الحزم من CRAN
-#install.packages("maftools")
-#install.packages("dplyr")
-#install.packages("skimr")
-#install.packages("tidyverse")
-#install.packages("ggplot2")
+install.packages("maftools")
+install.packages("dplyr")
+install.packages("skimr")
+install.packages("tidyverse")
+install.packages("ggplot2")
 
-# إذا أردت تثبيت حزم من Bioconductor (لمجالات البيوانفورماتكس):
-#if (!requireNamespace("BiocManager", quietly = TRUE))
-#    install.packages("BiocManager")
-#BiocManager::install("maftools")
+ #إذا أردت تثبيت حزم من Bioconductor (لمجالات البيوانفورماتكس):
+if (!requireNamespace("BiocManager", quietly = TRUE))
+   install.packages("BiocManager")
+BiocManager::install("maftools")
 ```
 
 ```{r Setting up the environment}
@@ -172,7 +172,7 @@ colnames(Breast_tumor_metadata)
 ```{r exploratory analysis- Gender}
 # إنشاء جدول لعدد المرضى حسب الجنس
 table_gender <- table(Breast_tumor_metadata$gender) 
-
+table_gender
 # رسم بياني يوضح توزيع الجنس
 barplot(table_gender,
         main = "Gender distribution of breast tumor cases", # عنوان الرسم
@@ -191,7 +191,7 @@ barplot(table_gender,
 ```{r exploratory analysis - Vital Status}
 # إنشاء جدول  لعدد المرضى حسب الحالة الحيوية (حي أو متوفى)
 table_vital_status <- table(Breast_tumor_metadata$vital_status) 
-
+table_vital_status
 # رسم بياني يوضح عدد المرضى الأحياء مقابل المتوفين
 barplot(table_vital_status,
         main = "Vital status of patients",# عنوان الرسم
@@ -276,10 +276,10 @@ ggplot(df_hist, aes(x = Var1, y = Freq)) +            #x = أسماء الأنو
 # إنشاء جدول لمراحل السرطان (Stage I, II, III, IV)
 # مع ترتيبها تنازليًا (الأكثر شيوعًا أولًا)
 table_stage <- sort(table(Breast_tumor_metadata$pathologic_stage), decreasing = TRUE)
-
+table_stage
 # تحويل الجدول إلى إطار بيانات
 df_stage <- as.data.frame(table_stage)
-
+df_stage
 # إعادة تسمية الأعمدة لتكون أوضح
 names(df_stage) <- c("Stage","Count")
 
